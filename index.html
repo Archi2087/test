@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Test Pro</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+<body>
+
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=106902013', 'ym');
+
+    ym(106902013, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/106902013" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+
+
+
+
+<div class="container">
+
+<h1>Test Pro</h1>
+
+<div class="panel">
+<input type="file" id="file">
+
+<div class="controls">
+
+<label>Количество:
+<input type="number" id="count" min="1">
+</label>
+
+<label>Диапазон:
+<input type="text" id="range" placeholder="например 24-36">
+</label>
+
+<button onclick="start()">Старт</button>
+<button id="randomBtn" onclick="toggleRandom()">Random</button>
+<button onclick="mistakesMode()">Ошибки</button>
+<button onclick="reviewAll()">Просмотр теста</button>
+
+</div>
+
+<div id="timer"></div>
+</div>
+
+<div id="progress"><div id="bar"></div></div>
+<div id="qcount"></div>
+
+<div id="app"></div>
+
+<button id="nextBtn" onclick="next()">Следующий</button>
+
+<canvas id="chart" height="120"></canvas>
+<div class="card">
+<h3>Статистика попыток</h3>
+<div id="statsList"></div>
+<button onclick="clearStats()">Очистить историю</button>
+</div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
