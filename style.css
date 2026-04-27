@@ -1,113 +1,224 @@
-body{
- font-family:system-ui,-apple-system,Segoe UI,Roboto;
- background:#0f172a;
- color:white;
- margin:0;
- padding:10px;
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #0b0b2b 0%, #1a1033 40%, #2b1b4a 100%);
+    margin: 0;
+    padding: 16px;
+    min-height: 100vh;
 }
 
-.card{
- background:#1e293b;
- padding:16px;
- margin:12px 0;
- border-radius:16px;
- box-shadow:0 4px 18px rgba(0,0,0,.4);
- animation:fade .25s ease;
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
-@keyframes fade{
- from{opacity:0; transform:translateY(10px)}
- to{opacity:1; transform:translateY(0)}
+h1 {
+    font-size: 32px;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 8px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    color: #e0d0ff;
+    text-shadow: 0 0 15px rgba(180, 130, 255, 0.4);
+    letter-spacing: -0.5px;
 }
 
-.option{
- padding:14px;
- margin:10px 0;
- background:#334155;
- border-radius:12px;
- cursor:pointer;
- font-size:17px;
- text-align:left;
- transition:.2s;
+/* Карточки и панели — стекло с фиолетово-синим отливом */
+.card,
+.panel,
+#app,
+#qcount,
+#timer,
+#progress {
+    background: rgba(30, 20, 60, 0.45);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 22px;
+    padding: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    color: #f0eaff;
 }
 
-.option:active{
- transform:scale(.98);
+.card {
+    animation: fadeIn 0.35s ease;
 }
 
-.correct{background:#16a34a !important}
-.wrong{background:#dc2626 !important}
-
-button{
- width:100%;
- padding:16px;
- margin-top:12px;
- border:none;
- border-radius:14px;
- background:#3b82f6;
- color:white;
- font-size:18px;
- font-weight:600;
+.panel {
+    background: rgba(18, 12, 45, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-button:active{
- transform:scale(.97);
+/* Текстовые элементы */
+h3 {
+    font-size: 20px;
+    margin: 0 0 10px;
+    color: #ffffff;
+    font-weight: 600;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
 
-input{
- width:100%;
- padding:14px;
- border-radius:12px;
- border:none;
- margin-top:10px;
- font-size:17px;
- background:#1e293b;
- color:white;
+#qcount, #timer {
+    text-align: center;
+    font-weight: 500;
+    color: rgba(240, 230, 255, 0.9);
+    font-size: 16px;
+    padding: 12px;
+    background: rgba(20, 10, 50, 0.4);
+    border-radius: 18px;
 }
 
-#top{
- display:flex;
- justify-content:space-between;
- align-items:center;
- font-size:15px;
- margin-bottom:8px;
+/* Опции ответов */
+.option {
+    padding: 15px 18px;
+    margin: 10px 0;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 17px;
+    cursor: pointer;
+    font-size: 17px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #fff;
 }
 
-#barBox{
- height:8px;
- background:#1e293b;
- border-radius:10px;
- margin:10px 0;
+.option:active {
+    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
-#bar{
- height:100%;
- width:0%;
- background:#22c55e;
- border-radius:10px;
- transition:.3s;
+.correct {
+    background: #2dd45c !important;
+    border-color: #8fffaa !important;
+    box-shadow: 0 0 20px rgba(45, 212, 92, 0.5);
+    color: #000;
+    font-weight: 700;
 }
 
-canvas{
- width:100%;
- margin-top:15px;
- background:#020617;
- border-radius:14px;
+.wrong {
+    background: #ff4757 !important;
+    border-color: #ff6b7a !important;
+    box-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
+    color: #fff;
+    font-weight: 700;
 }
 
-h3{
- font-size:20px;
- margin-top:0;
+/* Кнопки — яркий градиент */
+button {
+    width: 100%;
+    padding: 16px;
+    margin: 8px 0;
+    border: none;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #6c5ce7, #a73ee7);
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 8px 20px rgba(140, 80, 240, 0.4);
 }
 
-@media (min-width:700px){
- body{
-  max-width:600px;
-  margin:auto;
- }
- .correct{
- background:#1f7a3a;
- color:white;
+button:active {
+    transform: scale(0.97);
+    box-shadow: 0 4px 12px rgba(140, 80, 240, 0.3);
 }
 
+/* Отдельная кнопка Next */
+#nextBtn {
+    background: linear-gradient(135deg, #2b8df0, #6c3cf4);
+    box-shadow: 0 8px 20px rgba(40, 120, 255, 0.5);
+}
+
+/* Поля ввода */
+input {
+    width: 100%;
+    padding: 14px 16px;
+    margin: 8px 0 0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    color: white;
+    font-size: 16px;
+    outline: none;
+    transition: 0.2s;
+}
+
+input:focus {
+    border-color: #c084fc;
+    box-shadow: 0 0 20px rgba(192, 132, 252, 0.3);
+    background: rgba(255, 255, 255, 0.18);
+}
+
+input::placeholder {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+/* Прогресс-бар */
+#progress {
+    height: 10px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+#bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #48dbfb, #0be881);
+    border-radius: 20px;
+    transition: width 0.35s ease;
+    box-shadow: 0 0 15px rgba(72, 219, 251, 0.6);
+}
+
+/* Canvas графика */
+canvas {
+    width: 100%;
+    margin-top: 12px;
+    border-radius: 20px;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Адаптивность */
+@media (min-width: 700px) {
+    body {
+        padding: 28px;
+    }
+}
+
+/* Анимация */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Стилизация скроллбара (по желанию) */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(180, 130, 255, 0.4);
+    border-radius: 10px;
 }
