@@ -1,6 +1,7 @@
 let file, app, bar, qcount, nextBtn, timer, chart;
 
 const SESSION_KEY = 'testSession';
+const LIB_KEY = 'testLibrary';   // ключ для библиотеки тестов
 
 window.onload = () => {
     file = document.getElementById("file");
@@ -11,19 +12,35 @@ window.onload = () => {
     timer = document.getElementById("timer");
     chart = document.getElementById("chart");
 
+    // Обработчик загрузки файлов (теперь множественный)
     file.onchange = e => {
-        let r = new FileReader();
-        r.onload = x => {
-            all = parse(x.target.result);
-            alert("Загружено вопросов: " + all.length);
-            clearSession(); // новый файл – старая сессия не нужна
-        };
-        r.readAsText(e.target.files[0]);
+        if (!e.target.files.length) return;
+        // Обрабатываем каждый выбранный файл
+        for (let i = 0; i < e.target.files.length; i++) {
+            const f = e.target.files[i];
+            const reader = new FileReader();
+            reader.onload = x => {
+                const questions = parse(x.target.result);
+                if (!questions.length) {
+                    alert("Файл «" + f.name + "» не содержит вопросов");
+                    return;
+                }
+                addTestToLibrary(f.name, questions);
+                renderTestList();
+            };
+            reader.readAsText(f);
+        }
+        file.value = ''; // сбросим, чтобы можно было повторно загрузить те же файлы
+        file.style.display = 'none';
     };
 
-    // Проверяем, есть ли сохранённая сессия
+    // Восстанавливаем библиотеку, показываем список тестов
+    renderTestList();
+
+    // Проверяем сохранённую сессию (если тест уже выбран и не завершён)
     const saved = loadSession();
     if (saved) {
+        // Если в библиотеке есть нужные вопросы – можем спросить
         if (confirm('У вас есть незавершённый тест. Продолжить?')) {
             restoreSession(saved);
         } else {
@@ -32,6 +49,7 @@ window.onload = () => {
     }
 };
 
+// ─── Глобальные переменные для теста ──────
 let all = [], list = [], mistakes = [];
 let index = 0;
 let random = false;
@@ -40,8 +58,89 @@ let exam = false;
 let time = 0;
 let timerInt = null;
 
+// ─── Библиотека тестов ─────────────────
+function getLibrary() {
+    try {
+        return JSON.parse(localStorage.getItem(LIB_KEY)) || {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function saveLibrary(lib) {
+    localStorage.setItem(LIB_KEY, JSON.stringify(lib));
+}
+
+function addTestToLibrary(name, questions) {
+    const lib = getLibrary();
+    // Используем имя файла как ID, если такой уже есть – перезапишем
+    lib[name] = {
+        name: name,
+        questions: questions
+    };
+    saveLibrary(lib);
+}
+
+function deleteTestFromLibrary(name) {
+    const lib = getLibrary();
+    delete lib[name];
+    saveLibrary(lib);
+    renderTestList();
+}
+
+function renderTestList() {
+    const lib = getLibrary();
+    const container = document.getElementById("testList");
+    const names = Object.keys(lib);
+    if (names.length === 0) {
+        container.innerHTML = '<p style="color: rgba(255,255,255,0.5);">У вас пока нет тестов. Загрузите хотя бы один.</p>';
+    } else {
+        container.innerHTML = names.map(name => {
+            return `<div class="testItem">
+                <span>${escHtml(name)} (${lib[name].questions.length} вопр.)</span>
+                <div>
+                    <button class="selectTest" data-name="${escHtml(name)}">▶</button>
+                    <button class="deleteTest" data-name="${escHtml(name)}">🗑</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // Навешиваем обработчики
+    document.querySelectorAll('.selectTest').forEach(btn => {
+        btn.onclick = () => selectTest(btn.dataset.name);
+    });
+    document.querySelectorAll('.deleteTest').forEach(btn => {
+        btn.onclick = () => {
+            if (confirm('Удалить тест «' + btn.dataset.name + '»?')) {
+                deleteTestFromLibrary(btn.dataset.name);
+            }
+        };
+    });
+}
+
+function selectTest(name) {
+    const lib = getLibrary();
+    const test = lib[name];
+    if (!test) return;
+    all = test.questions;
+    // Сбрасываем сессию, переходим в режим выбора параметров
+    clearSession();
+    document.getElementById("settingsPanel").style.display = "block";
+    // Прокрутим к панели настроек (по желанию)
+    document.getElementById("settingsPanel").scrollIntoView({ behavior: 'smooth' });
+    // Обновим заголовок или что-то (не обязательно)
+    alert('Выбран тест: ' + name + ' (' + all.length + ' вопросов)');
+}
+
+function showFileInput() {
+    file.style.display = 'block';
+    file.click(); // сразу открываем диалог выбора
+}
+
+// ─── Логика теста (как раньше) ──────
 function start() {
-    if (!all.length) return alert("Загрузи файл");
+    if (!all.length) return alert("Сначала выберите тест");
 
     exam = confirm("Включить режим экзамена?");
 
@@ -74,10 +173,10 @@ function start() {
 
     time = list.length * (exam ? 10 : 15);
     clearInterval(timerInt);
-    startTimer(); // запускаем таймер с текущим time
+    startTimer();
 
     show();
-    saveSession(); // сохраняем новую сессию
+    saveSession();
 }
 
 function countInput() {
@@ -130,14 +229,14 @@ function ans(i) {
         mistakes.push(q);
     }
 
-    saveSession(); // сохраняем изменение ошибок и answered (не сохраняем, но всё равно)
+    saveSession();
 
     if (!exam) {
         nextBtn.style.display = "block";
     } else {
         setTimeout(() => {
             index++;
-            saveSession(); // сохраняем новое положение
+            saveSession();
             show();
         }, 700);
     }
@@ -145,7 +244,7 @@ function ans(i) {
 
 function next() {
     index++;
-    saveSession(); // сохраняем переход
+    saveSession();
     show();
 }
 
@@ -162,7 +261,7 @@ function finish() {
     saveResult(percent);
     drawChart();
 
-    clearSession(); // тест завершён, удаляем сессию
+    clearSession();
 
     alert(
         `Результат экзамена\nПравильных: ${correct}/${list.length}\nПроцент: ${percent}%`
@@ -170,7 +269,7 @@ function finish() {
 }
 
 function reviewAll() {
-    if (!all.length) return alert("Сначала загрузи файл");
+    if (!all.length) return alert("Сначала выберите тест");
 
     nextBtn.style.display = "none";
 
@@ -201,7 +300,7 @@ function toggleRandom() {
         btn.textContent = "Random";
     }
 
-    saveSession(); // сохраняем флаг random
+    saveSession();
 }
 
 function mistakesMode() {
@@ -210,10 +309,11 @@ function mistakesMode() {
 
     list = [...mistakes];
     index = 0;
-    saveSession(); // сохраняем новую сессию по ошибкам
+    saveSession();
     show();
 }
 
+// ─── Вспомогательные функции (без изменений) ────
 function shuffle(a) {
     return a
         .map(x => [Math.random(), x])
@@ -256,6 +356,13 @@ function drawChart() {
     });
 }
 
+function clearStats() {
+    if (!confirm("Удалить историю результатов?")) return;
+    localStorage.removeItem("hist");
+    drawChart();
+}
+
+// ─── Парсинг (без изменений) ────
 function parse(text) {
     text = text.replace(/\r/g, "").replace(/—|–/g, "-");
 
@@ -323,17 +430,20 @@ function conv(s) {
     return 0;
 }
 
-function clearStats() {
-    if (!confirm("Удалить историю результатов?")) return;
-    localStorage.removeItem("hist");
-    drawChart();
-}
-
 function esc(s) {
     return s
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;");
+}
+
+function escHtml(s) {
+    return s
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#039;");
 }
 
 function saveResult(p) {
@@ -342,14 +452,11 @@ function saveResult(p) {
     localStorage.setItem("hist", JSON.stringify(h));
 }
 
-/* ── Сохранение и восстановление сессии ── */
-
+// ─── Сессия теста (как раньше) ────
 function saveSession() {
-    // Не сохраняем, если нет активного списка или тест завершён
     if (!list.length || index >= list.length) return;
-
     const session = {
-        all: all,               // все вопросы (восстановим, чтобы не требовался файл)
+        all: all,
         list: list,
         index: index,
         mistakes: mistakes,
@@ -357,25 +464,17 @@ function saveSession() {
         random: random,
         time: time
     };
-
     try {
         localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    } catch (e) {
-        // localStorage переполнен – молча игнорируем
-        console.warn('Не удалось сохранить сессию', e);
-    }
+    } catch (e) {}
 }
 
 function loadSession() {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
-
     try {
         const data = JSON.parse(raw);
-        // Простейшая проверка структуры
-        if (data.all && data.list && typeof data.index === 'number') {
-            return data;
-        }
+        if (data.all && data.list && typeof data.index === 'number') return data;
     } catch (e) {}
     return null;
 }
@@ -393,7 +492,6 @@ function restoreSession(session) {
     random = session.random;
     time = session.time;
 
-    // Обновляем кнопку Random
     let randBtn = document.getElementById("randomBtn");
     if (random) {
         randBtn.style.background = "#22c55e";
@@ -403,12 +501,10 @@ function restoreSession(session) {
         randBtn.textContent = "Random";
     }
 
-    // Запускаем таймер с сохранённым временем
     clearInterval(timerInt);
     startTimer();
-
-    // Показываем текущий вопрос
     show();
+    document.getElementById("settingsPanel").style.display = "block";
 }
 
 function startTimer() {
@@ -416,6 +512,5 @@ function startTimer() {
         time--;
         if (time < 0) time = 0;
         timer.textContent = "⏱ " + time + "s";
-        // если время вышло – не завершаем автоматически, как было в исходнике
     }, 1000);
 }
