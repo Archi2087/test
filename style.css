@@ -4,6 +4,7 @@ body {
     margin: 0;
     padding: 16px;
     min-height: 100vh;
+    overflow-x: hidden; /* чтобы ничего не скроллилось вбок */
 }
 
 .container {
@@ -12,10 +13,12 @@ body {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 h1 {
-    font-size: 32px;
+    font-size: 28px;
     font-weight: 700;
     text-align: center;
     margin: 0 0 8px;
@@ -46,6 +49,8 @@ h1 {
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5),
                 inset 0 1px 0 rgba(255, 255, 255, 0.1);
     color: #f0eaff;
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .card {
@@ -55,6 +60,9 @@ h1 {
 .panel {
     background: rgba(18, 12, 45, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 /* Текстовые элементы */
@@ -90,6 +98,7 @@ h3 {
     font-weight: 500;
     transition: all 0.2s ease;
     color: #fff;
+    box-sizing: border-box;
 }
 
 .option:active {
@@ -129,6 +138,7 @@ button {
     cursor: pointer;
     transition: all 0.15s ease;
     box-shadow: 0 8px 20px rgba(140, 80, 240, 0.4);
+    box-sizing: border-box;
 }
 
 button:active {
@@ -136,15 +146,15 @@ button:active {
     box-shadow: 0 4px 12px rgba(140, 80, 240, 0.3);
 }
 
-/* Отдельная кнопка Next */
 #nextBtn {
     background: linear-gradient(135deg, #2b8df0, #6c3cf4);
     box-shadow: 0 8px 20px rgba(40, 120, 255, 0.5);
 }
 
-/* Поля ввода */
+/* Поля ввода — самое важное для адаптивности */
 input {
     width: 100%;
+    max-width: 100%;
     padding: 14px 16px;
     margin: 8px 0 0;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -156,6 +166,8 @@ input {
     font-size: 16px;
     outline: none;
     transition: 0.2s;
+    box-sizing: border-box;          /* чтобы padding не увеличивал ширину */
+    -webkit-appearance: none;        /* убираем нативные тени в iOS */
 }
 
 input:focus {
@@ -166,6 +178,32 @@ input:focus {
 
 input::placeholder {
     color: rgba(255, 255, 255, 0.45);
+}
+
+/* Специфично для input[type="file"] — урезаем имя файла, чтобы не раздувало */
+input[type="file"] {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Блок с настройками (количество, диапазон) */
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.controls label {
+    display: block;
+    width: 100%;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 2px;
+    box-sizing: border-box;
 }
 
 /* Прогресс-бар */
@@ -196,6 +234,7 @@ canvas {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255,255,255,0.15);
+    box-sizing: border-box;
 }
 
 /* Адаптивность */
@@ -211,7 +250,7 @@ canvas {
     to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Стилизация скроллбара (по желанию) */
+/* Стилизация скроллбара (опционально) */
 ::-webkit-scrollbar {
     width: 6px;
 }
