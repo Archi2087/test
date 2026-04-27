@@ -261,3 +261,43 @@ canvas {
     background: rgba(180, 130, 255, 0.4);
     border-radius: 10px;
 }
+/* Стили для библиотеки тестов */
+#testSelector {
+    background: rgba(30, 20, 60, 0.5);
+    border: 1px solid rgba(255,255,255,0.25);
+}
+
+#testList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.testItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 16px;
+    padding: 12px 16px;
+    color: white;
+}
+
+.testItem button {
+    width: auto;
+    padding: 8px 12px;
+    margin: 0 0 0 6px;
+    font-size: 18px;
+}
+
+.selectTest {
+    background: linear-gradient(135deg, #6c5ce7, #a73ee7);
+}
+
+.deleteTest {
+    background: rgba(255, 71, 87, 0.8);
+    color: white;
+}
