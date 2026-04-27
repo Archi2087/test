@@ -1,7 +1,8 @@
 let file, app, bar, qcount, nextBtn, timer, chart;
 
 const SESSION_KEY = 'testSession';
-const LIB_KEY = 'testLibrary';   // ключ для библиотеки тестов
+const LIB_KEY = 'testLibrary';
+const CURRENT_TEST_KEY = 'currentTest'; // ключ для имени активного теста
 
 window.onload = () => {
     file = document.getElementById("file");
@@ -12,10 +13,9 @@ window.onload = () => {
     timer = document.getElementById("timer");
     chart = document.getElementById("chart");
 
-    // Обработчик загрузки файлов (теперь множественный)
+    // Обработчик загрузки файлов (множественный)
     file.onchange = e => {
         if (!e.target.files.length) return;
-        // Обрабатываем каждый выбранный файл
         for (let i = 0; i < e.target.files.length; i++) {
             const f = e.target.files[i];
             const reader = new FileReader();
@@ -25,26 +25,32 @@ window.onload = () => {
                     alert("Файл «" + f.name + "» не содержит вопросов");
                     return;
                 }
-                addTestToLibrary(f.name, questions);
+                const testName = f.name.replace(/\.txt$/i, ''); // без .txt
+                addTestToLibrary(testName, questions);
                 renderTestList();
             };
             reader.readAsText(f);
         }
-        file.value = ''; // сбросим, чтобы можно было повторно загрузить те же файлы
+        file.value = '';
         file.style.display = 'none';
     };
 
-    // Восстанавливаем библиотеку, показываем список тестов
+    // Восстанавливаем библиотеку и, возможно, активный тест
     renderTestList();
 
-    // Проверяем сохранённую сессию (если тест уже выбран и не завершён)
+    // Если была сохранена активная сессия – предлагаем продолжить
     const saved = loadSession();
     if (saved) {
-        // Если в библиотеке есть нужные вопросы – можем спросить
         if (confirm('У вас есть незавершённый тест. Продолжить?')) {
             restoreSession(saved);
         } else {
             clearSession();
+        }
+    } else {
+        // Если сессии нет, но мы помним, какой тест был выбран – просто покажем настройки
+        const currentName = localStorage.getItem(CURRENT_TEST_KEY);
+        if (currentName && getLibrary()[currentName]) {
+            selectTest(currentName, false); // false = не показывать alert и не скроллить
         }
     }
 };
@@ -73,11 +79,7 @@ function saveLibrary(lib) {
 
 function addTestToLibrary(name, questions) {
     const lib = getLibrary();
-    // Используем имя файла как ID, если такой уже есть – перезапишем
-    lib[name] = {
-        name: name,
-        questions: questions
-    };
+    lib[name] = { name, questions };
     saveLibrary(lib);
 }
 
@@ -85,6 +87,14 @@ function deleteTestFromLibrary(name) {
     const lib = getLibrary();
     delete lib[name];
     saveLibrary(lib);
+    // Если удаляем активный тест – сбрасываем
+    if (localStorage.getItem(CURRENT_TEST_KEY) === name) {
+        localStorage.removeItem(CURRENT_TEST_KEY);
+        all = [];
+        document.getElementById("settingsPanel").style.display = "none";
+        document.getElementById("currentTestLabel").textContent = '';
+        document.getElementById("currentTestLabel").style.display = 'none';
+    }
     renderTestList();
 }
 
@@ -92,13 +102,15 @@ function renderTestList() {
     const lib = getLibrary();
     const container = document.getElementById("testList");
     const names = Object.keys(lib);
+    const currentName = localStorage.getItem(CURRENT_TEST_KEY);
     if (names.length === 0) {
         container.innerHTML = '<p style="color: rgba(255,255,255,0.5);">У вас пока нет тестов. Загрузите хотя бы один.</p>';
     } else {
         container.innerHTML = names.map(name => {
-            return `<div class="testItem">
+            const activeClass = (name === currentName) ? ' active' : '';
+            return `<div class="testItem${activeClass}">
                 <span>${escHtml(name)} (${lib[name].questions.length} вопр.)</span>
-                <div>
+                <div class="testItemButtons">
                     <button class="selectTest" data-name="${escHtml(name)}">▶</button>
                     <button class="deleteTest" data-name="${escHtml(name)}">🗑</button>
                 </div>
@@ -108,7 +120,7 @@ function renderTestList() {
 
     // Навешиваем обработчики
     document.querySelectorAll('.selectTest').forEach(btn => {
-        btn.onclick = () => selectTest(btn.dataset.name);
+        btn.onclick = () => selectTest(btn.dataset.name, true);
     });
     document.querySelectorAll('.deleteTest').forEach(btn => {
         btn.onclick = () => {
@@ -119,23 +131,28 @@ function renderTestList() {
     });
 }
 
-function selectTest(name) {
+function selectTest(name, showAlert = true) {
     const lib = getLibrary();
     const test = lib[name];
     if (!test) return;
     all = test.questions;
-    // Сбрасываем сессию, переходим в режим выбора параметров
     clearSession();
+    localStorage.setItem(CURRENT_TEST_KEY, name);
+    // Отображаем имя теста вверху
+    const label = document.getElementById("currentTestLabel");
+    label.textContent = '📖 ' + name;
+    label.style.display = 'block';
     document.getElementById("settingsPanel").style.display = "block";
-    // Прокрутим к панели настроек (по желанию)
-    document.getElementById("settingsPanel").scrollIntoView({ behavior: 'smooth' });
-    // Обновим заголовок или что-то (не обязательно)
-    alert('Выбран тест: ' + name + ' (' + all.length + ' вопросов)');
+    if (showAlert) {
+        alert('Выбран тест: ' + name + ' (' + all.length + ' вопросов)');
+        document.getElementById("settingsPanel").scrollIntoView({ behavior: 'smooth' });
+    }
+    renderTestList(); // обновим подсветку
 }
 
 function showFileInput() {
     file.style.display = 'block';
-    file.click(); // сразу открываем диалог выбора
+    file.click();
 }
 
 // ─── Логика теста (как раньше) ──────
@@ -313,7 +330,7 @@ function mistakesMode() {
     show();
 }
 
-// ─── Вспомогательные функции (без изменений) ────
+// ─── Вспомогательные функции ──────────
 function shuffle(a) {
     return a
         .map(x => [Math.random(), x])
@@ -362,7 +379,92 @@ function clearStats() {
     drawChart();
 }
 
-// ─── Парсинг (без изменений) ────
+function esc(s) {
+    return s
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+}
+
+function escHtml(s) {
+    return s
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function saveResult(p) {
+    let h = JSON.parse(localStorage.getItem("hist") || "[]");
+    h.push(p);
+    localStorage.setItem("hist", JSON.stringify(h));
+}
+
+// ─── Сессия теста ─────────────────────
+function saveSession() {
+    if (!list.length || index >= list.length) return;
+    const session = {
+        all: all,
+        list: list,
+        index: index,
+        mistakes: mistakes,
+        exam: exam,
+        random: random,
+        time: time
+    };
+    try {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    } catch (e) {}
+}
+
+function loadSession() {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    try {
+        const data = JSON.parse(raw);
+        if (data.all && data.list && typeof data.index === 'number') return data;
+    } catch (e) {}
+    return null;
+}
+
+function clearSession() {
+    localStorage.removeItem(SESSION_KEY);
+}
+
+function restoreSession(session) {
+    all = session.all;
+    list = session.list;
+    index = session.index;
+    mistakes = session.mistakes || [];
+    exam = session.exam;
+    random = session.random;
+    time = session.time;
+
+    let randBtn = document.getElementById("randomBtn");
+    if (random) {
+        randBtn.style.background = "#22c55e";
+        randBtn.textContent = "Random ON";
+    } else {
+        randBtn.style.background = "#3b82f6";
+        randBtn.textContent = "Random";
+    }
+
+    clearInterval(timerInt);
+    startTimer();
+    show();
+    document.getElementById("settingsPanel").style.display = "block";
+}
+
+function startTimer() {
+    timerInt = setInterval(() => {
+        time--;
+        if (time < 0) time = 0;
+        timer.textContent = "⏱ " + time + "s";
+    }, 1000);
+}
+
+// ─── Парсинг текста ─────────────────
 function parse(text) {
     text = text.replace(/\r/g, "").replace(/—|–/g, "-");
 
@@ -428,89 +530,4 @@ function conv(s) {
     if ("CВ3".includes(s)) return 2;
     if ("DГ4".includes(s)) return 3;
     return 0;
-}
-
-function esc(s) {
-    return s
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;");
-}
-
-function escHtml(s) {
-    return s
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll("\"", "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
-function saveResult(p) {
-    let h = JSON.parse(localStorage.getItem("hist") || "[]");
-    h.push(p);
-    localStorage.setItem("hist", JSON.stringify(h));
-}
-
-// ─── Сессия теста (как раньше) ────
-function saveSession() {
-    if (!list.length || index >= list.length) return;
-    const session = {
-        all: all,
-        list: list,
-        index: index,
-        mistakes: mistakes,
-        exam: exam,
-        random: random,
-        time: time
-    };
-    try {
-        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    } catch (e) {}
-}
-
-function loadSession() {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    try {
-        const data = JSON.parse(raw);
-        if (data.all && data.list && typeof data.index === 'number') return data;
-    } catch (e) {}
-    return null;
-}
-
-function clearSession() {
-    localStorage.removeItem(SESSION_KEY);
-}
-
-function restoreSession(session) {
-    all = session.all;
-    list = session.list;
-    index = session.index;
-    mistakes = session.mistakes || [];
-    exam = session.exam;
-    random = session.random;
-    time = session.time;
-
-    let randBtn = document.getElementById("randomBtn");
-    if (random) {
-        randBtn.style.background = "#22c55e";
-        randBtn.textContent = "Random ON";
-    } else {
-        randBtn.style.background = "#3b82f6";
-        randBtn.textContent = "Random";
-    }
-
-    clearInterval(timerInt);
-    startTimer();
-    show();
-    document.getElementById("settingsPanel").style.display = "block";
-}
-
-function startTimer() {
-    timerInt = setInterval(() => {
-        time--;
-        if (time < 0) time = 0;
-        timer.textContent = "⏱ " + time + "s";
-    }, 1000);
 }
