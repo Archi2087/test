@@ -243,7 +243,16 @@ function ans(i) {
 
     if (i !== q.correct) {
         nodes[i].classList.add("wrong");
-        mistakes.push(q);
+        // Добавляем только если такого вопроса ещё нет в ошибках
+        if (!mistakes.includes(q)) {
+            mistakes.push(q);
+        }
+    } else {
+        // При правильном ответе удаляем вопрос из ошибок (если он там был)
+        const idx = mistakes.indexOf(q);
+        if (idx !== -1) {
+            mistakes.splice(idx, 1);
+        }
     }
 
     saveSession();
