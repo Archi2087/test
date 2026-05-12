@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6c5ce7">
+    <link rel="icon" href="icon-192.png" sizes="192x192">
+    <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+    <!-- Yandex.Metrika (без изменений) -->
+    <script type="text/javascript">
+        (function(m,e,t,r,i,k,a){
+            m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+            m[i].l=1*new Date();
+            for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+            k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=106902013', 'ym');
+        ym(106902013, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+    </script>
+    <noscript><div><img src="https://mc.yandex.ru/watch/106902013" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+
+    <div class="container">
+        <div id="currentTestLabel" class="currentTest"></div>
+
+        <div class="card" id="testSelector">
+            <h3>📚 Мои тесты</h3>
+            <div id="testList"></div>
+            <button id="loadNewBtn" onclick="showFileInput()">➕ Загрузить новый тест</button>
+            <input type="file" id="file" style="display: none;" accept=".txt" multiple>
+        </div>
+
+        <div class="panel" id="settingsPanel" style="display: none;">
+            <div class="controls">
+                <label>Количество:
+                    <input type="number" id="count" min="1">
+                </label>
+                <label>Диапазон:
+                    <input type="text" id="range" placeholder="например 24-36">
+                </label>
+                <button onclick="start()">Старт</button>
+                <button id="randomBtn" onclick="toggleRandom()">Random</button>
+                <button onclick="mistakesMode()">Ошибки</button>
+                <button id="favoritesBtn" onclick="favoritesMode()">⭐ Избранное</button>
+                <button onclick="reviewAll()">Просмотр теста</button>
+                <button id="mistakeStatsBtn" onclick="reviewMistakeStats()">📊 Статистика ошибок</button>
+                <button id="editTestBtn" onclick="editTest()">✏️ Редактировать тест</button>  <!-- новая кнопка -->
+            </div>
+            <div id="timer"></div>
+        </div>
+
+        <div id="progress"><div id="bar"></div></div>
+        <div id="qcount"></div>
+        <div id="app"></div>
+        <button id="nextBtn" onclick="next()">Следующий</button>
+
+        <canvas id="chart" height="120"></canvas>
+
+        <!-- Блок профиля (очки, уровень, достижения) -->
+        <div class="card" id="profileCard">
+            <h3>🏆 Профиль</h3>
+            <div id="profileInfo"></div>
+            <div id="achievementsList"></div>
+        </div>
+
+        <div class="card">
+            <h3>Статистика попыток</h3>
+            <div id="statsList"></div>
+            <button onclick="clearStats()">Очистить историю</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
