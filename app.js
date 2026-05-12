@@ -2,7 +2,8 @@ let file, app, bar, qcount, nextBtn, timer, chart;
 
 const SESSION_KEY = 'testSession';
 const LIB_KEY = 'testLibrary';
-const CURRENT_TEST_KEY = 'currentTest'; // ключ для имени активного теста
+const CURRENT_TEST_KEY = 'currentTest';
+const MISTAKE_STATS_KEY = 'mistakeStats';  // новый ключ
 
 window.onload = () => {
     file = document.getElementById("file");
@@ -25,7 +26,7 @@ window.onload = () => {
                     alert("Файл «" + f.name + "» не содержит вопросов");
                     return;
                 }
-                const testName = f.name.replace(/\.txt$/i, ''); // без .txt
+                const testName = f.name.replace(/\.txt$/i, '');
                 addTestToLibrary(testName, questions);
                 renderTestList();
             };
@@ -35,10 +36,9 @@ window.onload = () => {
         file.style.display = 'none';
     };
 
-    // Восстанавливаем библиотеку и, возможно, активный тест
     renderTestList();
 
-    // Если была сохранена активная сессия – предлагаем продолжить
+    // Восстановление сессии
     const saved = loadSession();
     if (saved) {
         if (confirm('У вас есть незавершённый тест. Продолжить?')) {
@@ -47,15 +47,14 @@ window.onload = () => {
             clearSession();
         }
     } else {
-        // Если сессии нет, но мы помним, какой тест был выбран – просто покажем настройки
         const currentName = localStorage.getItem(CURRENT_TEST_KEY);
         if (currentName && getLibrary()[currentName]) {
-            selectTest(currentName, false); // false = не показывать alert и не скроллить
+            selectTest(currentName, false);
         }
     }
 };
 
-// ─── Глобальные переменные для теста ──────
+// Глобальные переменные теста
 let all = [], list = [], mistakes = [];
 let index = 0;
 let random = false;
@@ -64,7 +63,7 @@ let exam = false;
 let time = 0;
 let timerInt = null;
 
-// ─── Библиотека тестов ─────────────────
+// ─── Библиотека тестов ──────
 function getLibrary() {
     try {
         return JSON.parse(localStorage.getItem(LIB_KEY)) || {};
@@ -87,7 +86,8 @@ function deleteTestFromLibrary(name) {
     const lib = getLibrary();
     delete lib[name];
     saveLibrary(lib);
-    // Если удаляем активный тест – сбрасываем
+    // очистка статистики ошибок для удаляемого теста
+    clearMistakeStatsForTest(name);
     if (localStorage.getItem(CURRENT_TEST_KEY) === name) {
         localStorage.removeItem(CURRENT_TEST_KEY);
         all = [];
@@ -118,7 +118,6 @@ function renderTestList() {
         }).join('');
     }
 
-    // Навешиваем обработчики
     document.querySelectorAll('.selectTest').forEach(btn => {
         btn.onclick = () => selectTest(btn.dataset.name, true);
     });
@@ -138,7 +137,6 @@ function selectTest(name, showAlert = true) {
     all = test.questions;
     clearSession();
     localStorage.setItem(CURRENT_TEST_KEY, name);
-    // Отображаем имя теста вверху
     const label = document.getElementById("currentTestLabel");
     label.textContent = '📖 ' + name;
     label.style.display = 'block';
@@ -147,7 +145,7 @@ function selectTest(name, showAlert = true) {
         alert('Выбран тест: ' + name + ' (' + all.length + ' вопросов)');
         document.getElementById("settingsPanel").scrollIntoView({ behavior: 'smooth' });
     }
-    renderTestList(); // обновим подсветку
+    renderTestList();
 }
 
 function showFileInput() {
@@ -155,72 +153,53 @@ function showFileInput() {
     file.click();
 }
 
-// ─── Логика теста (как раньше) ──────
+// ─── Логика теста ──────
 function start() {
     if (!all.length) return alert("Сначала выберите тест");
-
     exam = confirm("Включить режим экзамена?");
-
     let count = parseInt(countInput());
     let range = parseRange();
-
     let pool = [...all];
-
     if (range)
         pool = pool.filter(q => q.number >= range.min && q.number <= range.max);
-
     if (random) {
         pool = shuffle(pool);
         pool.forEach(q => shuffleAnswers(q));
     }
-
     if (count && count < pool.length)
         pool = pool.slice(0, count);
-
     list = pool;
     index = 0;
     drawChart();
-
     mistakes = [];
-
     if (!list.length) {
         alert("Нет вопросов в выбранном диапазоне");
         return;
     }
-
     time = list.length * (exam ? 10 : 15);
     clearInterval(timerInt);
     startTimer();
-
     show();
     saveSession();
 }
 
-function countInput() {
-    return document.getElementById("count").value;
-}
+function countInput() { return document.getElementById("count").value; }
 
 function parseRange() {
     let val = document.getElementById("range").value;
     if (!val.includes("-")) return null;
-
     let [a, b] = val.split("-").map(Number);
     if (isNaN(a) || isNaN(b)) return null;
-
     if (a > b) [a, b] = [b, a];
-
     return { min: a, max: b };
 }
 
 function show() {
     if (index >= list.length) return finish();
-
     answered = false;
     nextBtn.style.display = "none";
-
     let q = list[index];
     qcount.textContent = `${index + 1} / ${list.length}`;
-
     app.innerHTML =
         `<div class="card">
             <h3>${q.number}. ${esc(q.text)}</h3>
@@ -228,35 +207,20 @@ function show() {
                 `<div class="option" onclick="ans(${i})">${o}</div>`
             ).join("")}
         </div>`;
-
     bar.style.width = (index / list.length * 100) + "%";
 }
 
 function ans(i) {
     if (answered) return;
     answered = true;
-
     let q = list[index];
     let nodes = document.querySelectorAll(".option");
-
     nodes[q.correct].classList.add("correct");
-
     if (i !== q.correct) {
         nodes[i].classList.add("wrong");
-        // Добавляем только если такого вопроса ещё нет в ошибках
-        if (!mistakes.includes(q)) {
-            mistakes.push(q);
-        }
-    } else {
-        // При правильном ответе удаляем вопрос из ошибок (если он там был)
-        const idx = mistakes.indexOf(q);
-        if (idx !== -1) {
-            mistakes.splice(idx, 1);
-        }
+        mistakes.push(q);
     }
-
     saveSession();
-
     if (!exam) {
         nextBtn.style.display = "block";
     } else {
@@ -277,28 +241,26 @@ function next() {
 function finish() {
     if (!list.length) return;
     nextBtn.style.display = "none";
-
     clearInterval(timerInt);
     timerInt = null;
-
     let correct = list.length - mistakes.length;
     let percent = Math.round(correct / list.length * 100);
-
     saveResult(percent);
     drawChart();
 
-    clearSession();
+    // *** НОВОЕ: сохранение ошибок в накопительную статистику ***
+    const currentTestName = localStorage.getItem(CURRENT_TEST_KEY);
+    if (currentTestName && mistakes.length) {
+        mistakes.forEach(q => addMistake(currentTestName, q.number));
+    }
 
-    alert(
-        `Результат экзамена\nПравильных: ${correct}/${list.length}\nПроцент: ${percent}%`
-    );
+    clearSession();
+    alert(`Результат экзамена\nПравильных: ${correct}/${list.length}\nПроцент: ${percent}%`);
 }
 
 function reviewAll() {
     if (!all.length) return alert("Сначала выберите тест");
-
     nextBtn.style.display = "none";
-
     app.innerHTML = all.map(q => `
         <div class="card">
             <h3>${q.number}. ${q.text}</h3>
@@ -307,17 +269,14 @@ function reviewAll() {
             ).join("")}
         </div>
     `).join("");
-
     bar.style.width = "100%";
     qcount.textContent = "Режим просмотра";
 }
 
 function toggleRandom() {
     if (exam) return alert("В экзамене нельзя менять режим");
-
     random = !random;
     let btn = document.getElementById("randomBtn");
-
     if (random) {
         btn.style.background = "#22c55e";
         btn.textContent = "Random ON";
@@ -325,21 +284,110 @@ function toggleRandom() {
         btn.style.background = "#3b82f6";
         btn.textContent = "Random";
     }
-
     saveSession();
 }
 
 function mistakesMode() {
     if (exam) return alert("В экзамене недоступно");
     if (!mistakes.length) return alert("Ошибок нет");
-
     list = [...mistakes];
     index = 0;
     saveSession();
     show();
 }
 
-// ─── Вспомогательные функции ──────────
+// ══════ НОВЫЙ БЛОК: статистика ошибок ══════
+function getMistakeStats() {
+    try {
+        return JSON.parse(localStorage.getItem(MISTAKE_STATS_KEY)) || {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function saveMistakeStats(stats) {
+    localStorage.setItem(MISTAKE_STATS_KEY, JSON.stringify(stats));
+}
+
+function addMistake(testName, questionNumber) {
+    const stats = getMistakeStats();
+    if (!stats[testName]) stats[testName] = {};
+    stats[testName][questionNumber] = (stats[testName][questionNumber] || 0) + 1;
+    saveMistakeStats(stats);
+}
+
+function removeMistakeStat(testName, questionNumber) {
+    const stats = getMistakeStats();
+    if (stats[testName]) {
+        delete stats[testName][questionNumber];
+        if (Object.keys(stats[testName]).length === 0) {
+            delete stats[testName];
+        }
+        saveMistakeStats(stats);
+    }
+}
+
+function clearMistakeStatsForTest(testName) {
+    const stats = getMistakeStats();
+    delete stats[testName];
+    saveMistakeStats(stats);
+}
+
+function reviewMistakeStats() {
+    const currentTestName = localStorage.getItem(CURRENT_TEST_KEY);
+    if (!currentTestName) return alert("Сначала выберите тест");
+
+    const lib = getLibrary();
+    const test = lib[currentTestName];
+    if (!test) return alert("Тест не найден");
+
+    const stats = getMistakeStats();
+    const testStats = stats[currentTestName] || {};
+
+    const mistakeQuestions = test.questions.filter(q => testStats[q.number] > 0);
+    if (!mistakeQuestions.length) {
+        return alert("У вас нет сохранённых ошибок по этому тесту");
+    }
+
+    nextBtn.style.display = "none";
+    bar.style.width = "0%";
+    qcount.textContent = "📊 Статистика ошибок";
+
+    app.innerHTML = mistakeQuestions.map(q => {
+        const errCount = testStats[q.number];
+        return `
+            <div class="card" style="position: relative;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>${q.number}. ${esc(q.text)}</h3>
+                    <span style="font-size: 14px; color: #ff8a80; margin-left: 10px;">Ошибок: ${errCount}</span>
+                </div>
+                ${q.options.map((o, i) => {
+                    const cls = i === q.correct ? "correct" : "";
+                    return `<div class="option ${cls}">${esc(o)}</div>`;
+                }).join("")}
+                <button
+                    class="deleteMistakeBtn"
+                    data-test="${escHtml(currentTestName)}"
+                    data-qnumber="${q.number}"
+                    style="position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; padding: 0; border-radius: 50%; background: rgba(255,82,82,0.8); font-size: 16px; line-height: 30px;"
+                >🗑</button>
+            </div>
+        `;
+    }).join("");
+
+    document.querySelectorAll('.deleteMistakeBtn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const testName = btn.dataset.test;
+            const qNumber = parseInt(btn.dataset.qnumber);
+            removeMistakeStat(testName, qNumber);
+            reviewMistakeStats();
+        };
+    });
+}
+// ══════ конец нового блока ══════
+
+// ─── Вспомогательные функции ──────
 function shuffle(a) {
     return a
         .map(x => [Math.random(), x])
@@ -352,12 +400,10 @@ function shuffleAnswers(q) {
         text,
         correct: i === q.correct
     }));
-
     for (let i = arr.length - 1; i > 0; i--) {
         let j = Math.floor(Math.random() * (i + 1));
         [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-
     q.options = arr.map(x => x.text);
     q.correct = arr.findIndex(x => x.correct);
 }
@@ -365,19 +411,14 @@ function shuffleAnswers(q) {
 function drawChart() {
     let ctx = chart.getContext("2d");
     ctx.clearRect(0, 0, chart.width, chart.height);
-
     ctx.fillStyle = "#22c55e";
-
     let h = JSON.parse(localStorage.getItem("hist") || "[]");
     if (!h.length) return;
-
     let w = chart.width / h.length;
-
     h.forEach((p, i) => {
         if (p < 50) ctx.fillStyle = "#ef4444";
         else if (p < 75) ctx.fillStyle = "#f59e0b";
         else ctx.fillStyle = "#22c55e";
-
         ctx.fillRect(i * w, chart.height, w - 4, -p);
     });
 }
@@ -410,7 +451,7 @@ function saveResult(p) {
     localStorage.setItem("hist", JSON.stringify(h));
 }
 
-// ─── Сессия теста ─────────────────────
+// ─── Сессия ──────
 function saveSession() {
     if (!list.length || index >= list.length) return;
     const session = {
@@ -473,62 +514,50 @@ function startTimer() {
     }, 1000);
 }
 
-// ─── Парсинг текста ─────────────────
+// Парсинг
 function parse(text) {
     text = text.replace(/\r/g, "").replace(/—|–/g, "-");
-
     let lines = text.split("\n").map(x => x.trim()).filter(Boolean);
-
     let qs = [];
     let ans = [];
     let block = false;
     let cur = null;
-
     for (let l of lines) {
         if (l.includes("===== ОТВЕТЫ =====")) {
             block = true;
             continue;
         }
-
         if (block) {
             let a = parseAns(l);
             if (a != null) ans.push(a);
             continue;
         }
-
         let q = l.match(/^(\d+)[\.\)]\s*(.+)/);
         if (q) {
             cur = { number: +q[1], text: q[2], options: [], correct: 0 };
             qs.push(cur);
             continue;
         }
-
         let o = l.match(/^[A-DА-Г1-4][\)\.\:]?\s*(.+)/);
         if (o && cur) {
             cur.options.push(o[1]);
             continue;
         }
-
         if (cur) cur.text += " " + l;
     }
-
     qs.forEach((q, i) => {
         if (ans[i] !== undefined) q.correct = ans[i];
     });
-
     return qs;
 }
 
 function parseAns(l) {
     let m = l.match(/[:\-]\s*([A-DА-Г1-4])/);
     if (m) return conv(m[1]);
-
     m = l.match(/^[A-DА-Г1-4]$/);
     if (m) return conv(m[0]);
-
     m = l.match(/([A-DА-Г])/);
     if (m) return conv(m[1]);
-
     return null;
 }
 
