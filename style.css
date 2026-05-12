@@ -364,3 +364,11 @@ canvas {
     background: rgba(255, 86, 86, 0.3) !important;
     border-color: #ff5656 !important;
 }
+.deleteMistakeBtn {
+    transition: 0.2s;
+    border: none;
+    cursor: pointer;
+}
+.deleteMistakeBtn:hover {
+    background: rgba(255, 82, 82, 1);
+}
